@@ -1,4 +1,3 @@
-// Arduino and KY-040 module
 #include <WiFiClientSecure.h>
 #include <MQTT.h>
 #include "RosterEntry.h"
@@ -6,11 +5,9 @@
 #include "arduino_secrets.h"
 #include <TFT_eSPI.h> // Hardware-specific library
 
+#define NUMBER_OF_THROTTLES 6
 
 #define TFT_GREY 0x5AEB
-#define NUMBER_OF_THROTTLES 6
-#define DATA_PIN 5
-
 #define RED2RED 0
 #define GREEN2GREEN 1
 #define BLUE2BLUE 2
@@ -22,7 +19,6 @@
 #define METERYOFFSET 5
 
 String prefix;
-String displayText[4];
 String locoName;
 String delimeter = "";
 String receivedLine = "";
@@ -38,23 +34,21 @@ int numberOfLocosInRoster = -1;
 RosterEntry currentLoco;
 RosterEntry roster[30];
 
-
 const char* ssid     = SECRET_SSID;
 const char* password = SECRET_PASS;
-const char * clientName = "KnobBoxSig1a";
+const char * clientName = "KnobBoxTFT";
 const uint16_t port = 1883;
 const char * server = "192.168.1.29";
 String cabSignalTopic = "layout/cabsignal/";
 String locoMovementTopic = "layout/locomovement/";
 
-//SW, DT, CLk
-//CLK, DT, SW
+//mtIndex, CLK, DT, SW, TFTX, TFTY
 Controller throttles[NUMBER_OF_THROTTLES] = {
   Controller("1", 36, 39, 34, 0, 0),
   Controller("2", 35, 32, 33, 160, 0),
   Controller("3", 4, 25, 27, 0, 170),
   Controller("4", 14, 13, 15, 160, 170),
-  Controller("5", 5, 17, 16, 0, 340),wd
+  Controller("5", 5, 17, 16, 0, 340),
   Controller("6", 21, 19, 18, 160, 340)
 };
 
@@ -71,21 +65,9 @@ void setup() {
   tft.setRotation(0);
   tft.fillScreen(TFT_BLACK);
 
-  //throttles[0] = Controller("1", 34, 39, 36,0,0);
-  //throttles[1] = Controller("2", 33, 32, 35,160,0);
-  //selector = Controller("AS", true, 34, 39, 36);
-  //functionSelector = Controller("FS", true, 18, 19, 23);
-  //throttles[0] = Controller("1", false,  16, 17, 5);
-  //throttles[1] = Controller("2", false,  13, 15, 14);
-  //throttles[2] = Controller("3", false,  33, 32, 35);
-  //throttles[3] = Controller("4", false,  2, 0, 4);
-  //throttles[4] = Controller("5", false,  27, 26, 25);
-
   int tryDelay = 500;
   int numberOfTries = 20;
-
   bool isConnected = false;
-
 
   while (!isConnected) {
 
@@ -149,7 +131,6 @@ void setup() {
   prefix = "";
   locoName = "";
 
-  //drawScreen();
   for (int i = 0; i < NUMBER_OF_THROTTLES; i++) {
     clearThrottle(i);
   }
@@ -188,7 +169,6 @@ void messageReceived(String &topic, String &payload) {
         signalAspectHasChanged = true;
         drawSignal(i);
       }
-
     }
   }
 }
@@ -223,7 +203,6 @@ void loop() {
     throttles[i].CheckMovement();
 
     if (previousKnobPosition != throttles[i].KnobPosition) {
-      //Serial.println("Diff " + String(throttles[i].buttonIsHeld) +" = "+ String(previousButtonHeldState)+" - "+String(throttles[i].selectionIsChanging));
       if (throttles[i].buttonIsHeld == 1 && previousButtonHeldState == 1) {
         //change selected loco
         if (throttles[i].KnobPosition > numberOfLocosInRoster)
@@ -231,8 +210,7 @@ void loop() {
         throttles[i].newSelectedRosterIndex = throttles[i].KnobPosition;
         throttles[i].selectionChangedSinceHoldInitiated = true;
         printLocoToScreen(i);
-        //Serial.println("Test " + roster[3].Name + " - " + roster[3].Id);
-        Serial.println("Loco at dial " + roster[throttles[i].KnobPosition].Name + " - KP " + String(throttles[i].KnobPosition));
+        //Serial.println("Loco at dial " + roster[throttles[i].KnobPosition].Name + " - KP " + String(throttles[i].KnobPosition));
       }
       else {
         //change speed
@@ -242,7 +220,6 @@ void loop() {
           Serial.print("New speed " + String(throttles[i].KnobPosition) + " writing " + spd);
           writeString(spd);
           drawThrottle(i);
-          //updateSpeedOnLCD(i);
           if (!throttles[i].hasMovedSinceAcquired) {
             throttles[i].hasMovedSinceAcquired = true;
             mqttClient.publish(locoMovementTopic + roster[throttles[i].rosterIndex].Id , "Start", false, 0);
@@ -253,9 +230,7 @@ void loop() {
     }
 
     //Stop / direction change
-
     if (throttles[i].ButtonState != previousButtonState && throttles[i].ButtonState == 0 && previousButtonHeldState != 1) {// && functionSelector.selectionIsChanging <0 && functionSelector.selectionIsChanging <0) { //buttonIsHeld has not yet been processed so this check will think it's held / been held
-      //Serial.println(String(i) + " pBHS " + String(previousButtonHeldState) + " c - " + String(throttles[i].buttonIsHeld));
       if (throttles[i].rosterIndex > -1)
       {
         if (throttles[i].KnobPosition > 0) {
@@ -265,7 +240,6 @@ void loop() {
           roster[throttles[i].rosterIndex].currentSpeed = 0;
           writeString(spd);
           drawThrottle(i);
-          //updateSpeedOnLCD(i);
         }
         else
         {
@@ -285,21 +259,13 @@ void loop() {
         Serial.println("Selector button held - throttle " + String(i) + " current train assignment " + throttles[i].TrainName + " - " + String(throttles[i].rosterIndex));
         //throttles[i].selectionIsChanging = true;
         clearThrottleScreen(i);
-        String selectMessage = centreString("Select loco", 12);
+        String selectMessage = centreString("Select loco", 20);
         tft.drawString(selectMessage, throttles[i].tftX, throttles[i].tftY + 30, 4);
-        throttles[i].KnobPosition = throttles[i].rosterIndex;
+        if (throttles[i].rosterIndex >= 0)
+          throttles[i].KnobPosition = throttles[i].rosterIndex;
+        else
+          throttles[i].KnobPosition = 0;
         throttles[i].selectionChangedSinceHoldInitiated = false;
-        //functionSelector.selectionIsChanging = i;
-        //functionSelector.KnobPosition = throttles[i].lastExecutedFunction;
-        //clearScreenAndDisplayCache();
-        //printLineToScreen("Throttle " + throttles[i].mtIndex, 0, 0);
-        if (throttles[i].rosterIndex >= 0) {
-          //printLineToScreen("Select loco or fn", 0, 1);
-        }
-        else {
-          //printLineToScreen("Select loco to start", 0, 1);
-        }
-
       }
       else { //hold has been released
         Serial.println("Hold released on throttle " + String(i));
@@ -310,7 +276,6 @@ void loop() {
           if (throttles[i].KnobPosition > -1) {
             Serial.println("Selector button hold released - assign currently selected train - ");
             throttles[i].TrainName = roster[throttles[i].KnobPosition].Name;
-
             throttles[i].signalAspect = 'X';
             throttles[i].hasMovedSinceAcquired = false;
 
@@ -330,9 +295,7 @@ void loop() {
 
             //Handle newly assigned loco
             throttles[i].rosterIndex = throttles[i].newSelectedRosterIndex;
-
             String assign = "M" + throttles[i].mtIndex + "+" + roster[throttles[i].newSelectedRosterIndex].IdType +  roster[throttles[i].newSelectedRosterIndex].Id + "<;>" + roster[throttles[i].newSelectedRosterIndex].IdType +  roster[throttles[i].newSelectedRosterIndex].Id + "\n";
-
             Serial.print("Assigned Write " + assign);
 
             writeString(assign);
@@ -348,7 +311,6 @@ void loop() {
           }
         }
         else {
-          //selector.selectionIsChanging = -1;
           Serial.println("Selector button hold released - no change in selection detected, no new assignment - " );
 
           //deselect train from MT
@@ -369,19 +331,15 @@ void loop() {
             throttles[i].signalAspect = 'X';
           }
 
-
           throttles[i].TrainName = "";
           throttles[i].rosterIndex = -1;
           throttles[i].KnobPosition = -1;
           throttles[i].signalAspect = 'X';
           clearThrottle(i);
-          //UpdateScreenColours();
         }
 
         throttles[i].selectionChangedSinceHoldInitiated = false;
         throttles[i].functionSelectionChangedSinceHoldInitiated = 0;
-        //selector.selectionIsChanging = -1;
-        //functionSelector.selectionIsChanging = -1;
       }
     }
   }
@@ -412,8 +370,6 @@ void readFromWiiTHrottle() {
         trackPowerState = false;
       }
       trackPowerCollecting = false;
-      //Serial.println("Track power state now "+String(trackPowerState));
-      //showStatusPage();
     }
   }
   if (actionCollecting == true) {
@@ -469,13 +425,11 @@ void readFromWiiTHrottle() {
             for (int i = 0; i < NUMBER_OF_THROTTLES; i++) {
               if (throttles[i].rosterIndex == rosterIndexToUpdate) {
                 drawThrottle(i);
-                Serial.println("Speed update on throttle "+String(i));
+                Serial.println("Speed update on throttle " + String(i));
               }
             }
           }
-
         }
-
       }
       else if (actionType == "R") {
         //direction
@@ -484,7 +438,7 @@ void readFromWiiTHrottle() {
         for (int i = 0; i < NUMBER_OF_THROTTLES; i++) {
           if (throttles[i].rosterIndex == rosterIndexToUpdate) {
             drawThrottle(i);
-            Serial.println("Dir update on throttle "+String(i));
+            Serial.println("Dir update on throttle " + String(i));
           }
         }
 
@@ -597,7 +551,7 @@ void printLocoToScreen(int i) {
   clearThrottleScreen(i);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
-  String centeredId = centreString( roster[throttles[i].newSelectedRosterIndex].Id, 12);
+  String centeredId = centreString( roster[throttles[i].newSelectedRosterIndex].Id, 10);
   String centeredName = centreString(roster[throttles[i].newSelectedRosterIndex].Name.substring(0, 24), 26);
   tft.drawString(centeredId, throttles[i].tftX, throttles[i].tftY + 20, 6);
   tft.drawString(centeredName, throttles[i].tftX, throttles[i].tftY + 100, 2);
@@ -616,19 +570,16 @@ void connect() {
     Serial.print(".");
     delay(1000);
   }
-
   Serial.println("\nconnected!");
-  // mqttClient.subscribe("debug/PWMVal/#");
-
 }
 
 
 String centreString(String text, int maxLength) {
   int len = text.length();
-  Serial.println(text);
-  Serial.println("len " + String(len));
+  //Serial.println(text);
+  //Serial.println("len " + String(len));
   int diff = maxLength - len;
-  Serial.println("diff " + String(diff));
+  //Serial.println("diff " + String(diff));
   int halfDiff = diff / 2;
   String paddingString = "";
   for (int i = 0; i < halfDiff; i++) {
@@ -640,9 +591,10 @@ String centreString(String text, int maxLength) {
 void drawSignal(int i) {
   int mod = i % 2;
   int sigX = 17;
-  Serial.println("drawSignal");
+  //signal icons are placed at the edge of the screen so coordinates are different for left vs right screen meters
+  //work out if this throttle is on the left or right of the screen then adjust X coordinates appropriately
   if (mod != 0) sigX = 301;
-  uint8_t colour = 0;
+  uint16_t colour = 0;
   switch (throttles[i].signalAspect) {
     case 'P':
       colour = TFT_GREEN;
@@ -654,7 +606,6 @@ void drawSignal(int i) {
       colour = TFT_RED;
       break;
   }
-  Serial.println("Sig "+throttles[i].signalAspect);
   if (colour > 0)
     tft.fillCircle(sigX, throttles[i].tftY + 17, 15, colour);
   else
@@ -662,12 +613,13 @@ void drawSignal(int i) {
 }
 
 void drawTrainName(int x, int y, String trainName) {
-
   String centeredString = centreString(trainName.substring(0, 24), 26);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawString(centeredString, x, y + 110, 2);
 }
 
+//ringMeter and rainbow voids by Bodmer
+//https://www.instructables.com/Arduino-analogue-ring-meter-on-colour-TFT-display/
 int ringMeter(int value, int vmin, int vmax, int x, int y, int r, char *units, byte scheme)
 {
   // Minimum value of r is about 52 before value text intrudes on ring
@@ -684,7 +636,7 @@ int ringMeter(int value, int vmin, int vmax, int x, int y, int r, char *units, b
   int v = map(value, vmin, vmax, -angle, angle); // Map the value to an angle v
 
   byte seg = 5; // Segments are 5 degrees wide = 60 segments for 300 degrees
-  byte inc = 5; // Draw segments every 5 degrees, increase to 10 for segmented ring
+  byte inc = 10; // Draw segments every 5 degrees, increase to 10 for segmented ring
 
   // Draw colour blocks every inc degrees
   for (int i = -angle; i < angle; i += inc) {
@@ -730,35 +682,36 @@ int ringMeter(int value, int vmin, int vmax, int x, int y, int r, char *units, b
   }
 
   // Convert value to a string
-  char buf[10];
-  byte len = 4; if (value > 999) len = 5;
-  dtostrf(value, len, 0, buf);
+  if (value >= 0) {
+    char buf[10];
+    byte len = 4; if (value > 999) len = 5;
+    dtostrf(value, len, 0, buf);
 
-  // Set the text colour to default
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  // Uncomment next line to set the text colour to the last segment value!
-  // tft.setTextColor(text_colour, ILI9341_BLACK);
+    // Set the text colour to default
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    // Uncomment next line to set the text colour to the last segment value!
+    // tft.setTextColor(text_colour, ILI9341_BLACK);
 
-  // Print value, if the meter is large then use big font 6, othewise use 4
-  int padding = tft.textWidth("128", 4);
-  tft.setTextPadding(50);
-  if (r > 84) tft.drawCentreString(buf, x - 5, y - 20, 6); // Value in middle
-  else tft.drawCentreString(buf, x - 5, y - 20, 4); // Value in middle
-
-  // Print units, if the meter is large then use big font 4, othewise use 2
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  Serial.println(units);
-  if (r > 84) {
-    int padding = tft.textWidth("Word", 4);
+    // Print value, if the meter is large then use big font 6, othewise use 4
+    int padding = tft.textWidth("128", 4);
     tft.setTextPadding(50);
-    tft.drawCentreString(units, x, y + 30, 4); // Units display
-  }
-  else {
-    int padding = tft.textWidth("Word", 2);
-    tft.setTextPadding(50);
-    tft.drawCentreString(units, x, y + 5, 2); // Units display
-  }
+    if (r > 84) tft.drawCentreString(buf, x - 5, y - 20, 6); // Value in middle
+    else tft.drawCentreString(buf, x - 5, y - 20, 4); // Value in middle
 
+    // Print units, if the meter is large then use big font 4, othewise use 2
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    Serial.println(units);
+    if (r > 84) {
+      int padding = tft.textWidth("Word", 4);
+      tft.setTextPadding(50);
+      tft.drawCentreString(units, x, y + 30, 4); // Units display
+    }
+    else {
+      int padding = tft.textWidth("Word", 2);
+      tft.setTextPadding(50);
+      tft.drawCentreString(units, x, y + 5, 2); // Units display
+    }
+  }
   // Calculate and return right hand side x coordinate
   return x + r;
 }
@@ -801,5 +754,6 @@ unsigned int rainbow(byte value)
 }
 
 void clearThrottleScreen(int i) {
-  tft.fillRect( throttles[i].tftX, throttles[i].tftY,  throttles[i].tftX + 160, throttles[i].tftY + 160, TFT_BLACK);
+  Serial.println("X " + String(throttles[i].tftX) + " Y " + String(throttles[i].tftY));
+  tft.fillRect( throttles[i].tftX, throttles[i].tftY, 160, 160, TFT_BLACK);
 }

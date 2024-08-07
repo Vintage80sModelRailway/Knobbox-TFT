@@ -46,7 +46,7 @@ String locoMovementTopic = "layout/locomovement/";
 Controller throttles[NUMBER_OF_THROTTLES] = {
   Controller("1", 36, 39, 34, 0, 0),
   Controller("2", 35, 32, 33, 160, 0),
-  Controller("3", 4, 25, 27, 0, 170),
+  Controller("3", 4, 26, 27, 0, 170),
   Controller("4", 14, 13, 15, 160, 170),
   Controller("5", 5, 17, 16, 0, 340),
   Controller("6", 21, 19, 18, 160, 340)
@@ -125,14 +125,14 @@ void setup() {
     Serial.println("Connection to host failed");
   }
   else {
-    wifiClient.write("NESP32 Knob Throttle Sig\n");
+    wifiClient.write("NKnobBoxTFT\n");
     Serial.println("Connected to WiiThrottle");
   }
   prefix = "";
   locoName = "";
 
   for (int i = 0; i < NUMBER_OF_THROTTLES; i++) {
-    clearThrottle(i);
+    clearThrottleScreen(i);
   }
 }
 
@@ -335,7 +335,7 @@ void loop() {
           throttles[i].rosterIndex = -1;
           throttles[i].KnobPosition = -1;
           throttles[i].signalAspect = 'X';
-          clearThrottle(i);
+          clearThrottleScreen(i);
         }
 
         throttles[i].selectionChangedSinceHoldInitiated = false;
@@ -609,7 +609,7 @@ void drawSignal(int i) {
   if (colour > 0)
     tft.fillCircle(sigX, throttles[i].tftY + 17, 15, colour);
   else
-    tft.drawCircle(sigX, throttles[i].tftY + 17, 15, TFT_GREEN);
+    tft.drawCircle(sigX, throttles[i].tftY + 17, 14, TFT_GREEN);
 }
 
 void drawTrainName(int x, int y, String trainName) {

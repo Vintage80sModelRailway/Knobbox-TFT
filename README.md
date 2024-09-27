@@ -17,7 +17,6 @@ ESP, TFT and knob connections
 
 Assumes the following in the TFT_eSPI/User_setup.h, in the Ardiono libraries folder
 
-
 <code>#define TFT_MISO -1
   #define TFT_MOSI 0
   #define TFT_SCLK 12

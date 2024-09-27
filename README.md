@@ -18,13 +18,13 @@ ESP, TFT and knob connections
 Assumes the following in the TFT_eSPI/User_setup.h, in the Ardiono libraries folder
 
 
- <code> #define TFT_MISO -1
+ <code>#define TFT_MISO -1
   #define TFT_MOSI 0
   #define TFT_SCLK 12
   #define TFT_CS   23  // Chip select control pin
   #define TFT_DC    22  // Data Command control pin
-  #define TFT_RST   -1  // Reset pin (could connect to RST pin)
-</code>
+  #define TFT_RST   -1  // Reset pin (could connect to RST pin)</code>
+
 
 
 <img src = "https://github.com/Vintage80sModelRailway/Knobbox-TFT/blob/main/esp32-kb3.jpg" />

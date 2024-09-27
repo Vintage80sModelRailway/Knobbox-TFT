@@ -137,12 +137,8 @@ void setup() {
 }
 
 void drawThrottle(int i) {
-  char text[1] = {
-    'F'
-  };
   if (roster[throttles[i].rosterIndex].currentDirection < 1) ringMeter(throttles[i].KnobPosition, 0, 128, throttles[i].tftX + METERXOFFSET, throttles[i].tftY + METERYOFFSET, 52, "R" , GREEN2RED); // Draw analogue meter
   else ringMeter(throttles[i].KnobPosition, 0, 128, throttles[i].tftX + METERXOFFSET, throttles[i].tftY + METERYOFFSET, 52, "F" , GREEN2RED); // Draw analogue meter
-
 }
 
 void clearThrottle(int i) {

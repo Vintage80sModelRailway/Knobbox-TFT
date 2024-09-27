@@ -51,19 +51,6 @@ bool Controller::CheckMovement() {
       //Serial.println(mtIndex + " CW movement " + String(KnobPosition));
     }
     
-    /*
-    if (digitalRead(encoderPinB) != PinA_value) {
-      CW = true;
-      KnobPosition++;
-      Serial.println(mtIndex + " CW movement " + String(KnobPosition));
-    } else {
-      // if pin B state changed before pin A, rotation is counter-clockwise
-      CW = false;
-      KnobPosition--;
-      Serial.println(mtIndex + " AC movement " + String(KnobPosition));
-    }
-  */
-
     if (KnobPosition < -1) KnobPosition = -1;
     if (KnobPosition > 126) KnobPosition = 126;
   }
@@ -91,11 +78,5 @@ bool Controller::CheckMovement() {
       //Serial.println(mtIndex+" Button held");
     }
   }
-
-
-
-
-
-
   return movementDetected;
 }

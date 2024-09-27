@@ -12,3 +12,7 @@ Add an arduino_secrets.h file to the project, or replace the lines const char* s
 
 This is a hurried copy / paste / edit / rewrite of the code I wrote for the original Knob box, here.
 https://github.com/Vintage80sModelRailway/WiiThrottleKnobController
+
+ESP, TFT and knob connections
+
+https://github.com/Vintage80sModelRailway/Knobbox-TFT/blob/main/esp32-kb3.jpg

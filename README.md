@@ -15,4 +15,6 @@ https://github.com/Vintage80sModelRailway/WiiThrottleKnobController
 
 ESP, TFT and knob connections
 
+<img src = "https://github.com/Vintage80sModelRailway/Knobbox-TFT/blob/main/esp32-kb3.jpg" />
+
 https://github.com/Vintage80sModelRailway/Knobbox-TFT/blob/main/esp32-kb3.jpg
